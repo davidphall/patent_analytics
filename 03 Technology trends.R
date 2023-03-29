@@ -42,7 +42,13 @@ Sys.time() - starttime
 
   cpc$patent_id <- as.character(cpc$patent_id)
   # Filter the cpc codes
-  dt <- cpc %>% filter(grepl(pattern = 'H04R|H04S',x = cpc$cpc_group,ignore.case = T))
+  keep <- cpc %>% 
+  filter(grepl(pattern = 'G06F21|H04L63|H04L9|H04W12|H04K1',x = cpc$cpc_group,ignore.case = T)) %>%
+  select(patent_id) %>%
+  unique()
+  
+  dt <- cpc %>% filter(patent_id %in% keep$patent_id)
+
   # merge with patents
   dt <- merge(dt,patent,by = 'patent_id')
   # merge with assignee
@@ -50,6 +56,7 @@ Sys.time() - starttime
   # merge location 
   dt <- merge(dt,location,by = 'location_id')
 
+  
   # tidy up the location data
   dt$state_fips <- str_pad(string = dt$state_fips,width = 2,side = 'left',pad = '0')
   dt$county_fips <- str_pad(string = dt$county_fips,width = 3,side = 'left',pad = '0')
@@ -65,7 +72,10 @@ Sys.time() - starttime
   
   # County level
   # Summarize data by county
-  dt_county <- dt %>% filter(!is.na(county_fips)) %>% group_by(disambig_state,county,fips) %>% summarise(n=uniqueN(patent_id))
+  dt_county <- dt %>% 
+                filter(!is.na(county_fips)) %>% 
+                group_by(disambig_state,county,fips) %>% 
+                summarise(n=uniqueN(patent_id))
   
   # get geojson files for mapping
   url <- 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json'
@@ -86,14 +96,14 @@ Sys.time() - starttime
     z=dt_county$n,
     colorscale="Viridis",
     zmin=0,
-    zmax=10000,
+    zmax=3000,
     marker=list(line=list(
       width=0)
     )
   )
   fig <- fig %>% colorbar(title = "Number of patents")
   fig <- fig %>% layout(
-    title = "Veterinary patents granted by county",
+    title = "Audio patents granted by county",
     geo = g
   )
 
@@ -121,7 +131,7 @@ Sys.time() - starttime
   )
     fig <- fig %>% colorbar(title = "Count of patents")
     fig <- fig %>% layout(
-      title = 'Cyber security patents granted by State',
+      title = 'Cyber granted by State',
       geo = g
     )
     
@@ -155,6 +165,7 @@ Sys.time() - starttime
     
     dt$ml <- ifelse(grepl(pattern = paste(ml_cpcs,collapse = '|',sep = ''),x = dt$cpc_group,ignore.case = T),1,0)
     table(dt$ml)
+    head(dt$cpc_group)
     dt$ml <- ifelse(grepl(pattern = paste(ml_keywords,collapse = '|',sep = ''),x = dt$patent_title,ignore.case = T),1,dt$ml)
     dt$ml <- ifelse(grepl(pattern = paste(ml_keywords,collapse = '|',sep = ''),x = dt$patent_abstract,ignore.case = T),1,dt$ml)
     table(dt$ml) 
@@ -205,8 +216,7 @@ Sys.time() - starttime
     # Which chart is more accurate?
     
 
-    
-    
+
     
     
 ################################################################################
